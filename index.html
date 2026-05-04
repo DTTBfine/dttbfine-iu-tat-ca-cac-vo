@@ -853,7 +853,7 @@
 
 <!-- ══ NHẠC NỀN ══ -->
 <!-- Đặt file music.mp3 cùng thư mục với index.html -->
-<audio id="bg-music" src="music.mp3" loop preload="auto"></audio>
+<audio id="bg-music" src="music.mp3" loop preload="auto" autoplay playsinline></audio>
 <button id="music-btn" title="Nhạc nền">🔇</button>
 
 <div class="page">
@@ -1123,24 +1123,32 @@
 
 function tryPlay() {
     music.volume = 0.35;
-    music.play().then(() => {
+    return music.play().then(() => {
       playing = true;
       musicBtn.classList.add('playing');
       updateMusicBtn();
-    }).catch(() => {});
+    }).catch(() => {
+      updateMusicBtn();
+    });
   }
 
   tryPlay();
+  // Thử lại khi buffer đủ (lần gọi đầu đôi khi quá sớm trước khi audio sẵn sàng)
+  music.addEventListener('canplaythrough', () => {
+    if (!playing) tryPlay();
+  }, { once: true });
 
-  // Nếu trình duyệt chặn autoplay, phát khi người dùng tương tác lần đầu
+  // Nếu trình duyệt chặn autoplay có tiếng, phát sau lần chạm/click đầu tiên
   function onFirstInteract() {
     if (!playing) tryPlay();
     document.removeEventListener('click',      onFirstInteract);
     document.removeEventListener('touchstart', onFirstInteract);
+    document.removeEventListener('pointerdown', onFirstInteract);
   }
 
-  document.addEventListener('click',      onFirstInteract);
-  document.addEventListener('touchstart', onFirstInteract);
+  document.addEventListener('click',      onFirstInteract, { passive: true });
+  document.addEventListener('touchstart', onFirstInteract, { passive: true });
+  document.addEventListener('pointerdown', onFirstInteract, { passive: true });
 
 function updateMusicBtn() {
     musicBtn.innerHTML = playing
@@ -1161,6 +1169,8 @@ function updateMusicBtn() {
     }
     updateMusicBtn();
   });
+
+  updateMusicBtn();
 
   // ── MAP ────────────────────────────────────────────
   window.openMap  = () => { document.getElementById('map-overlay').style.display = 'flex'; };
