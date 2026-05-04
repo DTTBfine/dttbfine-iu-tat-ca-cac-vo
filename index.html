@@ -811,6 +811,14 @@
     to   { transform: scale(1);   opacity: 1; }
   }
 
+  @keyframes tapBounce {
+  0%        { transform: translateY(0)    scale(1)    rotate(0deg);  }
+  25%       { transform: translateY(10px) scale(0.92) rotate(-8deg); }
+  55%       { transform: translateY(2px)  scale(1.04) rotate(3deg);  }
+  75%       { transform: translateY(6px)  scale(0.97) rotate(-3deg); }
+  100%      { transform: translateY(0)    scale(1)    rotate(0deg);  }
+}
+
   /* ── RESPONSIVE ── */
   @media (max-width: 420px) {
     .page { padding: 1rem 0.75rem 3rem; }
@@ -851,10 +859,36 @@
 </head>
 <body>
 
-<!-- ══ NHẠC NỀN ══ -->
+<!-- ══ NHẠC NỀN + SPLASH (tap để mở nhạc — Autoplay Policy) ══ -->
 <!-- Đặt file music.mp3 cùng thư mục với index.html -->
-<audio id="bg-music" src="music.mp3" loop preload="auto" autoplay playsinline></audio>
-<button id="music-btn" title="Nhạc nền">🔇</button>
+<div id="splash" style="
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(160deg,#fde8ed,#f5e4f8,#dde8fc);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;cursor:pointer;touch-action:manipulation;
+">
+  <div style="font-size:56px;animation:float 2s ease-in-out infinite">🎓</div>
+  <p style="font-family:'Great Vibes',cursive;font-size:2.2rem;color:#3d2a3a;">Thư Mời Tốt Nghiệp</p>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:8px;">
+    <svg style="
+      width:52px;height:52px;
+      animation:tapBounce 1.4s cubic-bezier(0.36,0.07,0.19,0.97) infinite;
+      transform-origin:50% 90%;
+      filter:drop-shadow(0 6px 14px rgba(224,122,170,0.4));
+    " viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9 3.5V2M5.06066 5.06066L4 4M5.06066 13L4 14.0607M13 5.06066L14.0607 4M3.5 9H2M15.8645 16.1896L13.3727 20.817C13.0881 21.3457 12.9457 21.61 12.7745 21.6769C12.6259 21.7349 12.4585 21.7185 12.324 21.6328C12.1689 21.534 12.0806 21.2471 11.9038 20.6733L8.44519 9.44525C8.3008 8.97651 8.2286 8.74213 8.28669 8.58383C8.33729 8.44595 8.44595 8.33729 8.58383 8.2867C8.74213 8.22861 8.9765 8.3008 9.44525 8.44519L20.6732 11.9038C21.247 12.0806 21.5339 12.169 21.6327 12.324C21.7185 12.4586 21.7348 12.6259 21.6768 12.7745C21.61 12.9458 21.3456 13.0881 20.817 13.3728L16.1896 15.8645C16.111 15.9068 16.0717 15.9279 16.0374 15.9551C16.0068 15.9792 15.9792 16.0068 15.9551 16.0374C15.9279 16.0717 15.9068 16.111 15.8645 16.1896Z"
+        stroke="#d17aaa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span style="
+      font-family:'DM Sans',sans-serif;font-size:11px;
+      letter-spacing:2.5px;text-transform:uppercase;
+      color:#c084a8;
+    ">nhấn vô đây nhaaa!</span>
+  </div>
+</div>
+
+<audio id="bg-music" src="music.mp3" loop preload="auto" playsinline></audio>
+<button id="music-btn" title="Nhạc nền">🎵</button>
 
 <div class="page">
   <div class="card">
@@ -1116,45 +1150,33 @@
   tick();
   setInterval(tick, 1000);
 
-  // ── MUSIC ──────────────────────────────────────────
+  // ── MUSIC (splash tap → gesture hợp lệ cho play có tiếng) ──
   const music    = document.getElementById('bg-music');
   const musicBtn = document.getElementById('music-btn');
+  const splash   = document.getElementById('splash');
   let playing = false;
 
-function tryPlay() {
-    music.volume = 0.35;
-    return music.play().then(() => {
-      playing = true;
-      musicBtn.classList.add('playing');
-      updateMusicBtn();
-    }).catch(() => {
-      updateMusicBtn();
-    });
-  }
-
-  tryPlay();
-  // Thử lại khi buffer đủ (lần gọi đầu đôi khi quá sớm trước khi audio sẵn sàng)
-  music.addEventListener('canplaythrough', () => {
-    if (!playing) tryPlay();
-  }, { once: true });
-
-  // Nếu trình duyệt chặn autoplay có tiếng, phát sau lần chạm/click đầu tiên
-  function onFirstInteract() {
-    if (!playing) tryPlay();
-    document.removeEventListener('click',      onFirstInteract);
-    document.removeEventListener('touchstart', onFirstInteract);
-    document.removeEventListener('pointerdown', onFirstInteract);
-  }
-
-  document.addEventListener('click',      onFirstInteract, { passive: true });
-  document.addEventListener('touchstart', onFirstInteract, { passive: true });
-  document.addEventListener('pointerdown', onFirstInteract, { passive: true });
-
-function updateMusicBtn() {
+  function updateMusicBtn() {
     musicBtn.innerHTML = playing
       ? '🎵'
       : `<span style="position:relative;display:inline-block;">🎵<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-45deg);width:120%;height:2px;background:currentColor;border-radius:2px;display:block;"></span></span>`;
   }
+
+  function dismissSplash() {
+    splash.style.transition = 'opacity 0.5s ease';
+    splash.style.opacity = '0';
+    setTimeout(() => { splash.style.display = 'none'; }, 500);
+  }
+
+  splash.addEventListener('click', () => {
+    dismissSplash();
+    music.volume = 0.35;
+    music.play().then(() => {
+      playing = true;
+      musicBtn.classList.add('playing');
+      updateMusicBtn();
+    }).catch(console.error);
+  }, { once: true });
 
   musicBtn.addEventListener('click', (e) => {
     e.stopPropagation();
